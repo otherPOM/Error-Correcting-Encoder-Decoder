@@ -9,3 +9,8 @@ In this stage, you should write a program that:
 2. Encode the message by tripling all the symbols.
 3. Simulate sending this message via a poor internet connection (in other words, simulate errors).
 4. Decode it back again.
+
+## Stage 3
+In this stage, you should write a program that reads the text the user wants to send from the `send.txt`, and simulate the sending through a poor internet connection making one-bit errors in every byte of the text.
+The received message which contains an error in a single bit in every byte should be saved into `received.txt`.
+
