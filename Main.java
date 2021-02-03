@@ -1,77 +1,125 @@
 package correcter;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Locale;
-import java.util.Random;
 import java.util.Scanner;
 
 public class Main {
     private static final Scanner scan = new Scanner(System.in);
-    private static final Random rand = new Random();
-    private static final char[] symbolsNumbersSpace;
-
-    static {
-        var s = "abcdefghijklmnopqrstuvwxyz";
-        symbolsNumbersSpace = (s + s.toUpperCase(Locale.ROOT) + "0123456789 ").toCharArray();
-    }
 
     public static void main(String[] args) throws IOException {
-        try (var bis = new BufferedInputStream(
-                Files.newInputStream(
-                        Path.of("send.txt")));
-        var bos = new BufferedOutputStream(
-                Files.newOutputStream(
-                        Path.of("received.txt")))) {
+        System.out.print("Write a mode: ");
+        var mode = scan.nextLine();
+        System.out.println();
 
-            while (bis.available() > 0) {
-                var b = bis.read();
-                b ^= (1 << rand.nextInt(8));
-                bos.write(b);
-            }
+        var encoder = new BitEncDec();
+        switch (mode) {
+            case "encode":
+                var dataToEncode = Files.readAllBytes(Path.of("send.txt"));
+
+                System.out.println("send.txt");
+                System.out.println("text view: " + new String(dataToEncode));
+                System.out.println("hex view: " + hexString(dataToEncode));
+                System.out.println("bin view: " + binString(dataToEncode));
+                System.out.println();
+
+                var encodedData = encoder.encode(dataToEncode);
+
+                System.out.println("encoded.txt:");
+                System.out.println("expand: " + expandString(encodedData));
+                System.out.println("parity: " + binString(encodedData));
+                System.out.println("hex view: " + hexString(encodedData));
+                System.out.println();
+
+                Files.write(Path.of("encoded.txt"), encodedData);
+                break;
+            case "send":
+                var dataToSend = Files.readAllBytes(Path.of("encoded.txt"));
+
+                System.out.println("encoded.txt");
+                System.out.println("hex view: " + hexString(dataToSend));
+                System.out.println("bin view: " + binString(dataToSend));
+                System.out.println();
+
+                var corruptedData = encoder.simulateCorruption(dataToSend);
+
+                System.out.println("received.txt");
+                System.out.println("bin view: " + binString(corruptedData));
+                System.out.println("hex view: " + hexString(corruptedData));
+                System.out.println();
+
+                Files.write(Path.of("received.txt"), corruptedData);
+                break;
+            case "decode":
+                var dataToDecode = Files.readAllBytes(Path.of("received.txt"));
+
+                System.out.println("received.txt:");
+                System.out.println("hex view: " + hexString(dataToDecode));
+                System.out.println("bin view: " + binString(dataToDecode));
+                System.out.println();
+
+                var fixedData = encoder.decode(dataToDecode);
+                System.out.println("decoded.txt:");
+                System.out.println("decode: " + binString(fixedData));
+                System.out.println("hex view: " + hexString(fixedData));
+                System.out.println("text view: " + new String(fixedData));
+
+                Files.write(Path.of("decoded.txt"), fixedData);
+
+                break;
         }
-//        var line = scan.nextLine();
-//        var encoded = encode(line);
-//        var corrupted = simulateCorruption(encoded);
-//        var decoded = decode(corrupted);
-//        System.out.println(line);
-//        System.out.println(encoded);
-//        System.out.println(corrupted);
-//        System.out.println(decoded);
     }
 
-    private static String simulateCorruption(String data) {
-        var res = new StringBuilder();
-
-        for (int i = 0; i < data.length(); i += 3) {
-            var sub = data.substring(i, Math.min(i + 3, data.length())).toCharArray();
-            var corruption = symbolsNumbersSpace[rand.nextInt(symbolsNumbersSpace.length)];
-            sub[rand.nextInt(Math.min(3, sub.length))] = corruption;
-            res.append(sub);
-        }
-
-        return res.toString();
-    }
-
-    private static String encode(String data) {
+    private static String hexString(byte[] data) {
         var sb = new StringBuilder();
-        for (char c : data.toCharArray()) {
-            sb.append(c).append(c).append(c);
+        for (byte b : data) {
+            var hex = Integer.toHexString(b);
+            hex = hex.length() > 2 ? hex.substring(hex.length() - 2) : hex;
+            hex = hex.length() < 2 ? "0" + hex : hex;
+            sb.append(hex.toUpperCase(Locale.ROOT)).append(" ");
         }
         return sb.toString();
     }
 
-    private static String decode(String data) {
+    private static String binString(byte[] data) {
         var sb = new StringBuilder();
-        for (int i = 0; i < data.length(); i += 3) {
-            var c1 = data.charAt(i);
-            var c2 = data.charAt(i + 1);
-            var c3 = data.charAt(i + 2);
-            sb.append(c1 == c2 ? c1 : c1 == c3 ? c1 : c2);
+        for (byte b : data) {
+            var binary = toBinaryString(b);
+            sb.append(binary).append(" ");
         }
         return sb.toString();
+    }
+
+    private static String expandString(byte[] data) {
+        var sb = new StringBuilder();
+        for (byte b : data) {
+            var binary = toBinaryString(b);
+            sb.append(binary, 0, 6)
+                    .append("..")
+                    .append(" ");
+        }
+        return sb.toString();
+    }
+
+    private static String toBinaryString(byte b) {
+        var sb = new StringBuilder();
+        for (int i = 7; i >= 0 ; i--) {
+            sb.append((b >> i) & 1);
+        }
+        return sb.toString();
+    }
+
+    private static void stringStages() {
+        var encoder = new CharEncDec();
+        var line = scan.nextLine();
+        var encoded = encoder.encode(line);
+        var corrupted = encoder.simulateCorruption(encoded);
+        var decoded = encoder.decode(corrupted);
+        System.out.println(line);
+        System.out.println(encoded);
+        System.out.println(corrupted);
+        System.out.println(decoded);
     }
 }
