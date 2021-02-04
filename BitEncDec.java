@@ -1,42 +1,46 @@
 package correcter;
 
-import java.util.ArrayList;
 import java.util.Random;
 
 public class BitEncDec {
     private final Random rand = new Random();
 
     public byte[] encode(byte[] data) {
-        var list = new ArrayList<Byte>();
+        var res = new byte[data.length * 2];
 
-        var shift = 7;
-        byte n = 0;
-        for (int j = 0; j < data.length; j++) {
-            var b = data[j];
-            for (int i = 7; i >= 0; i--) {
-                var bit = getBit(b, i);
-                n += bit << shift;
-                n += bit << (shift - 1);
-                shift -= 2;
-                if (shift < 3 || (j == data.length - 1 && i == 0)) {
-                    var parity = (n >> 7 & 1) ^ (n >> 5 & 1) ^ (n >> 3 & 1);
-                    n += parity;
-                    n += parity << 1;
-                    shift = 7;
-                    list.add(n);
-                    n = 0;
-                }
-            }
-        }
-        var res = new byte[list.size()];
-        for (int i = 0; i < list.size(); i++) {
-            res[i] = list.get(i);
+        int ind = 0;
+        for (byte b : data) {
+            var bytes = hammingEncode(b);
+            res[ind++] = bytes[0];
+            res[ind++] = bytes[1];
         }
         return res;
     }
 
-    private int getBit(byte b, int pos) {
-        return (b >> pos) & 1;
+    private byte[] hammingEncode(byte b) {
+        var encoded = new byte[2];
+
+        var ind = 7;
+        for (int i = 0; i < 2; i++) {
+            byte encodedByte = 0;
+
+            encodedByte += (b >> ind-- & 1) << 5;
+            encodedByte += (b >> ind-- & 1) << 3;
+            encodedByte += (b >> ind-- & 1) << 2;
+            encodedByte += (b >> ind-- & 1) << 1;
+
+            encodedByte = parity(encodedByte);
+            encoded[i] = encodedByte;
+        }
+        return encoded;
+    }
+
+    private byte parity(byte b) {
+        var p1 = (b >> 5 & 1) ^ (b >> 3 & 1) ^ (b >> 1 & 1);
+        var p2 = (b >> 5 & 1) ^ (b >> 2 & 1) ^ (b >> 1 & 1);
+        var p4 = (b >> 3 & 1) ^ (b >> 2 & 1) ^ (b >> 1 & 1);
+        b += (p1 << 7) + (p2 << 6) + (p4 << 4);
+        return b;
     }
 
     public byte[] simulateCorruption(byte[] data) {
@@ -48,50 +52,42 @@ public class BitEncDec {
     }
 
     public byte[] decode(byte[] data) {
-        var list = new ArrayList<Byte>();
+        var res = new byte[data.length / 2];
+        for (int i = 0; i < data.length; i += 2) {
+            var b1 = fixBit(data[i]);
+            var b2 = fixBit(data[i + 1]);
+            byte decodedByte = 0;
 
-        byte fixedByte = 0;
-        var shift = 7;
-        for (byte b : data) {
-            var b1 = b >> 7 & 1;
-            var b2 = b >> 6 & 1;
-            var b3 = b >> 5 & 1;
-            var b4 = b >> 4 & 1;
-            var b5 = b >> 3 & 1;
-            var b6 = b >> 2 & 1;
-            var b7 = b >> 1 & 1;
-
-            var bit1 = b1 == b2 ? b1 : b3 ^ b5 ^ b7;
-            var bit2 = b3 == b4 ? b3 : b1 ^ b5 ^ b7;
-            var bit3 = b5 == b6 ? b5 : b1 ^ b3 ^ b7;
-
-            if (shift < 0) {
-                list.add(fixedByte);
-                fixedByte = 0;
-                shift = 7;
-            }
-            fixedByte += bit1 << shift--;
-            if (shift < 0) {
-                list.add(fixedByte);
-                fixedByte = 0;
-                shift = 7;
-            }
-            fixedByte += bit2 << shift--;
-            if (shift < 0) {
-                list.add(fixedByte);
-                fixedByte = 0;
-                shift = 7;
-            }
-            fixedByte += bit3 << shift--;
-        }
-        if (fixedByte != 0) {
-            list.add(fixedByte);
-        }
-
-        var res = new byte[list.size()];
-        for (int i = 0; i < list.size(); i++) {
-            res[i] = list.get(i);
+            decodedByte += (b1 >> 5 & 1) << 7;
+            decodedByte += (b1 >> 3 & 1) << 6;
+            decodedByte += (b1 >> 2 & 1) << 5;
+            decodedByte += (b1 >> 1 & 1) << 4;
+            decodedByte += (b2 >> 5 & 1) << 3;
+            decodedByte += (b2 >> 3 & 1) << 2;
+            decodedByte += (b2 >> 2 & 1) << 1;
+            decodedByte += (b2 >> 1 & 1);
+            res[i / 2] = decodedByte;
         }
         return res;
+    }
+
+    private static byte fixBit(byte b) {
+        var errorIndex = 0;
+        var p1 = b >> 7 & 1;
+        var p2 = b >> 6 & 1;
+        var p4 = b >> 4 & 1;
+
+        if (((b >> 5 & 1) ^ (b >> 3 & 1) ^ (b >> 1 & 1)) != p1) {
+            errorIndex += 1;
+        }
+        if (((b >> 5 & 1) ^ (b >> 2 & 1) ^ (b >> 1 & 1)) != p2) {
+            errorIndex += 2;
+        }
+        if (((b >> 3 & 1) ^ (b >> 2 & 1) ^ (b >> 1 & 1)) != p4) {
+            errorIndex += 4;
+        }
+        errorIndex = 8 - errorIndex;
+        b ^= 1 << errorIndex;
+        return b;
     }
 }

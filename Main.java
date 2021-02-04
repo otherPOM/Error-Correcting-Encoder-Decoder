@@ -21,15 +21,14 @@ public class Main {
 
                 System.out.println("send.txt");
                 System.out.println("text view: " + new String(dataToEncode));
-                System.out.println("hex view: " + hexString(dataToEncode));
                 System.out.println("bin view: " + binString(dataToEncode));
+                System.out.println("hex view: " + hexString(dataToEncode));
                 System.out.println();
 
                 var encodedData = encoder.encode(dataToEncode);
 
                 System.out.println("encoded.txt:");
-                System.out.println("expand: " + expandString(encodedData));
-                System.out.println("parity: " + binString(encodedData));
+                System.out.println("bin view: " + binString(encodedData));
                 System.out.println("hex view: " + hexString(encodedData));
                 System.out.println();
 
@@ -39,8 +38,8 @@ public class Main {
                 var dataToSend = Files.readAllBytes(Path.of("encoded.txt"));
 
                 System.out.println("encoded.txt");
-                System.out.println("hex view: " + hexString(dataToSend));
                 System.out.println("bin view: " + binString(dataToSend));
+                System.out.println("hex view: " + hexString(dataToSend));
                 System.out.println();
 
                 var corruptedData = encoder.simulateCorruption(dataToSend);
@@ -56,13 +55,13 @@ public class Main {
                 var dataToDecode = Files.readAllBytes(Path.of("received.txt"));
 
                 System.out.println("received.txt:");
-                System.out.println("hex view: " + hexString(dataToDecode));
                 System.out.println("bin view: " + binString(dataToDecode));
+                System.out.println("hex view: " + hexString(dataToDecode));
                 System.out.println();
 
                 var fixedData = encoder.decode(dataToDecode);
                 System.out.println("decoded.txt:");
-                System.out.println("decode: " + binString(fixedData));
+                System.out.println("bin view: " + binString(fixedData));
                 System.out.println("hex view: " + hexString(fixedData));
                 System.out.println("text view: " + new String(fixedData));
 
@@ -92,34 +91,11 @@ public class Main {
         return sb.toString();
     }
 
-    private static String expandString(byte[] data) {
-        var sb = new StringBuilder();
-        for (byte b : data) {
-            var binary = toBinaryString(b);
-            sb.append(binary, 0, 6)
-                    .append("..")
-                    .append(" ");
-        }
-        return sb.toString();
-    }
-
     private static String toBinaryString(byte b) {
         var sb = new StringBuilder();
         for (int i = 7; i >= 0 ; i--) {
             sb.append((b >> i) & 1);
         }
         return sb.toString();
-    }
-
-    private static void stringStages() {
-        var encoder = new CharEncDec();
-        var line = scan.nextLine();
-        var encoded = encoder.encode(line);
-        var corrupted = encoder.simulateCorruption(encoded);
-        var decoded = encoder.decode(corrupted);
-        System.out.println(line);
-        System.out.println(encoded);
-        System.out.println(corrupted);
-        System.out.println(decoded);
     }
 }
