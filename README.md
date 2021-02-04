@@ -23,3 +23,5 @@ If the mode is send, you should take the file from encoded.txt and simulate the 
 
 If the mode is decode, you should take the file from received.txt and decode it to the normal text. Save the text into the file named decoded.txt.
 
+## Stage 5
+In this stage, we will use a more efficient code, the Hamming code.
